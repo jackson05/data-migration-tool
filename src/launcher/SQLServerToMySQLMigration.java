@@ -7,11 +7,19 @@ public class SQLServerToMySQLMigration {
     	
     	Configurations c=new Configurations();
     	
+    	//Connection sQLServerConnection;
+    	PreparedStatement sQLPreparedStatement = null;
+    	ResultSet sQLTablesResultSet=null;
+    	ResultSet sQLResultSet=null;
+    	PreparedStatement mySQLPreparedStatement = null ;
+    	
+    	//Connection mySQLConnection; 
     	for(String schemaName:c.getDataBases()) {
     		//System.out.println(schemaName);
     		/*
     		 * String sqlServerUrl = "jdbc:sqlserver://localhost:1433;databaseName=mydb;sendStringParametersAsUnicode=false";
     		 * */
+    		
         	String sqlServerUrl="jdbc:"+c.getSrcRDBMS()+"://"+c.getSrcHost()+":"+c.getSrcPort()+"/"+schemaName+"?useUnicode=true&characterEncoding=utf-8&useSSL=false";
         	String sqlServerUser = "openclinic";
             String sqlServerPassword = "0pen";
@@ -20,21 +28,20 @@ public class SQLServerToMySQLMigration {
             String mySqlUser = "openclinic";
             String mySqlPassword = "0pen";
             
-            try {
+            try(Connection sQLServerConnection = DriverManager.getConnection(sqlServerUrl, sqlServerUser, sqlServerPassword);
+            	Connection mySQLConnection = DriverManager.getConnection(mySqlUrl, mySqlUser, mySqlPassword);	) {
         	   
-            	Connection sQLServerConnection = DriverManager.getConnection(sqlServerUrl, sqlServerUser, sqlServerPassword);
+            	
                 
                // Récupérer les noms de toutes les tables SQL Server
-               DatabaseMetaData sQLMetaData = sQLServerConnection.getMetaData();
-               ResultSet sQLTablesResultSet = sQLMetaData.getTables(null, null, "%", new String[]{"TABLE"});
+            	DatabaseMetaData sQLMetaData = sQLServerConnection.getMetaData();
+                sQLTablesResultSet = sQLMetaData.getTables(null, null, "%", new String[]{"TABLE"});
                
                while (sQLTablesResultSet.next()) {
                	
                    String tableName = sQLTablesResultSet.getString("TABLE_NAME");
                    
                    System.out.println("======> working on "+tableName);
-                   
-                   System.out.println("Traitement de la table : " + tableName);
                    
                    /* Vérifier si la table existe dans MySQL
                    boolean tableExists = false;
@@ -74,9 +81,9 @@ public class SQLServerToMySQLMigration {
                    
                    // Copier les données de la table SQL Server vers MySQL
         	
-                   PreparedStatement sQLPreparedStatement = sQLServerConnection.prepareStatement("SELECT * FROM " + tableName);
+                   sQLPreparedStatement = sQLServerConnection.prepareStatement("SELECT * FROM " + tableName);
                    sQLPreparedStatement.setFetchSize(1000);
-                   ResultSet sQLResultSet =sQLPreparedStatement.executeQuery();
+                   sQLResultSet =sQLPreparedStatement.executeQuery();
                    ResultSetMetaData dataResultSetMetaData = sQLResultSet.getMetaData();
                    StringBuilder insertQuery = new StringBuilder("INSERT INTO " + tableName + " VALUES (");
                    for (int i = 1; i <= dataResultSetMetaData.getColumnCount(); i++) {
@@ -90,21 +97,21 @@ public class SQLServerToMySQLMigration {
                    
                   //creation d'une instance de connection mysql
                    
-                   Connection mySQLConnection = DriverManager.getConnection(mySqlUrl, mySqlUser, mySqlPassword);
+                   
                   
                    //gestion de transaction des donées
                    mySQLConnection.setAutoCommit(false);
-                   PreparedStatement mySQLPreparedStatement = mySQLConnection.prepareStatement(insertQuery.toString());
+                   mySQLPreparedStatement = mySQLConnection.prepareStatement(insertQuery.toString());
                    
                    try {
                 	   
                        while (sQLResultSet.next()) {
                            for (int i = 1; i <= dataResultSetMetaData.getColumnCount(); i++) {
-                        	   mySQLPreparedStatement.setObject(i, sQLResultSet.getObject(i));
-                        	//  mySQLPreparedStatement.addBatch();
+                        	  mySQLPreparedStatement.setObject(i, sQLResultSet.getObject(i));
+                        	  mySQLPreparedStatement.addBatch();
                            }
                            
-                          // mySQLPreparedStatement.executeBatch();
+                           mySQLPreparedStatement.executeBatch();
                               
                 	   
                    }
@@ -113,26 +120,23 @@ public class SQLServerToMySQLMigration {
                    }catch (Exception e) {
                 	   mySQLConnection.rollback();
                 	   	e.printStackTrace();
-    			} finally {
-    				mySQLPreparedStatement.close();
-    				mySQLConnection.close();
-    				sQLResultSet.close();
-    				sQLPreparedStatement.close();
-    				sQLTablesResultSet.close();
-    				sQLServerConnection.close();
-    			}
+    			} 
                } 
            }catch (Exception e) {
         	   e.printStackTrace();
     	}
-            	
-            	
-            	
-            	
                 
              
     	}
         
-       
+    	try {
+    		mySQLPreparedStatement.close(); 
+			sQLResultSet.close();
+			sQLPreparedStatement.close();
+			sQLTablesResultSet.close();
+		} catch (SQLException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
     }
 }
