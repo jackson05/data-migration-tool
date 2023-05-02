@@ -34,7 +34,7 @@ public class SQLServerToMySQLMigration {
                    
                    System.out.println("======> working on "+tableName);
                    
-                   //System.out.println("Traitement de la table : " + tableName);
+                   System.out.println("Traitement de la table : " + tableName);
                    
                    /* Vérifier si la table existe dans MySQL
                    boolean tableExists = false;
@@ -102,7 +102,6 @@ public class SQLServerToMySQLMigration {
                            for (int i = 1; i <= dataResultSetMetaData.getColumnCount(); i++) {
                         	   mySQLPreparedStatement.setObject(i, sQLResultSet.getObject(i));
                         	//  mySQLPreparedStatement.addBatch();
-                        	   System.out.println(sQLResultSet.getObject(i));
                            }
                            
                           // mySQLPreparedStatement.executeBatch();
