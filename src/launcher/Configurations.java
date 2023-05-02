@@ -15,12 +15,12 @@ public class Configurations {
 	public static final String PREFIX=";";
 	
 	
-	public List<String> getDataBases() {
-		String databases;
+	public String[] getDataBases() {
+		String databases[];
 		for(String s:props()) {
 			if(s.toUpperCase().startsWith("DATABASES") && s.endsWith(PREFIX)) {
-				databases =s.substring("DATABASES".length()+2, s.length()-2);
-				return  Arrays.asList(databases);
+				databases =(s.substring("DATABASES".length()+2, s.length()-2)).split(",");
+				return  databases;
 			}
 		}
 		return null;
